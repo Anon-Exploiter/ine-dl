@@ -1002,8 +1002,7 @@ def main():
                     download_course(course_dl)
 
         elif args.category:
-            # category_courses = fetch_specific_category_courses(user_subscriptions, args.category)[0:20]
-            category_courses = fetch_specific_category_courses(user_subscriptions, args.category)[90:120]
+            category_courses = fetch_specific_category_courses(user_subscriptions, args.category)
             print()
 
             # for course in category_courses:
