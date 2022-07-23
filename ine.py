@@ -116,7 +116,7 @@ def login():
 
 def refresh_token(original_request):
     logger.opt(colors=True).info("Fetching refresh token..")
-    refresh_endpoint = "https://uaa.ine.com:443/auth/refresh-token"
+    refresh_endpoint = "https://uaa.ine.com:443/uaa/auth/refresh-token"
     request_headers["Host"] = "uaa.ine.com"
     refresh_request = requests.post(refresh_endpoint, headers=request_headers, proxies=proxy_config, verify=False)
     request_headers.pop("Host")
