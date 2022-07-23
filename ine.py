@@ -83,8 +83,7 @@ def debug_requests(request_object):
 
 
 def login():
-    login_url = "https://uaa.ine.com:443/auth/refresh-token"
-
+    login_url = "https://uaa.ine.com:443/uaa/mobile/authenticate"
     username, password = read_config("config.json")
 
     login_json_body = {
@@ -117,7 +116,7 @@ def login():
 
 def refresh_token(original_request):
     logger.opt(colors=True).info("Fetching refresh token..")
-    refresh_endpoint = "https://uaa.ine.com:443/uaa/mobile/authenticate"
+    refresh_endpoint = "https://uaa.ine.com:443/auth/refresh-token"
     request_headers["Host"] = "uaa.ine.com"
     refresh_request = requests.post(refresh_endpoint, headers=request_headers, proxies=proxy_config, verify=False)
     request_headers.pop("Host")
