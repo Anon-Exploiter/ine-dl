@@ -291,8 +291,11 @@ def fetch_user_subscriptions(course_contents, outfile, all_courses_metadata):
                             all_courses.append(courses)
                             # print(paid_subs_name)
 
+        unique_courses = {each["name"]: each for each in all_courses}.values()
+        all_courses = list(unique_courses)
+
         logger.opt(colors=True).debug(f"Total number of courses accessible to our user: {courses_with_access}")
-        # logger.opt(colors=True).debug(f"Writing the courses with access to in {outfile}")
+        logger.opt(colors=True).debug(f"Writing the courses with access to in {outfile}")
 
         with open(outfile, "w+", encoding="utf-8") as f:
             f.write(json.dumps(all_courses, indent=4, default=str))
@@ -367,11 +370,8 @@ def fetch_courses(course_contents):
 
 
 def download_aria2c(filename, url):
-    command = f"aria2c -s 10 -j 10 -x 16 -c -o '{filename}' '{url}' -q"
-    logger.opt(colors=True).debug(
-        f"<white>aria2c -s 10 -j 10 -x 16 -c -o </white><cyan>'{filename}'</cyan>"
-        f" <yellow>'{url}'</yellow><white> -q</white>"
-    )
+    command = f'aria2c -s 10 -j 10 -x 16 -c -o "{filename}" "{url}" -q'
+    logger.opt(colors=True).debug(command)
     os.system(command)
 
 
