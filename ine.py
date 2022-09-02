@@ -393,7 +393,7 @@ def download_video(course_name, content_uuid, complete_path, index):
             video_name = f"{index} - {video_title}"
             subs_name = video_name.replace(".mp4", ".srt").replace(".mov", ".srt")
 
-        elif "." not in video_title:
+        else:
             video_name = f"{index} - {video_title}.mp4"
             subs_name = f"{video_name}.srt"
 
