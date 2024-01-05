@@ -23,8 +23,10 @@ request_headers = {
 }
 
 proxy_config = {
-    # "http": "127.0.0.1:8080",
-    # "https": "127.0.0.1:8080",
+    # "http": "192.168.1.108:8080",
+    # "https": "192.168.1.108:8080",
+    # "http": "127.0.0.1:8000",
+    # "https": "127.0.0.1:8000",
 }
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -468,11 +470,11 @@ def download_video(course_name, content_uuid, complete_path, index, course_uuid)
         download_video(course_name, content_uuid, complete_path, index, course_uuid)
 
 
-def download_quiz(course_name, content_uuid, complete_path, index):
+def download_quiz(course_name, content_uuid, complete_path, index, course_uuid):
     logger.opt(colors=True).info(f"Fetching quiz '{content_uuid}' from '{course_name}'")
 
     initial_quiz_attempt = requests.post(
-        f"https://quiz.rmotr.com/api/v1/quizzes/{content_uuid}/attempts",
+        f"https://quiz.rmotr.com/api/v1/quizzes/{content_uuid}/attempts?parent_type=course&parent_id={course_uuid}",
         headers=request_headers,
         proxies=proxy_config,
         verify=False,
@@ -497,7 +499,7 @@ def download_quiz(course_name, content_uuid, complete_path, index):
 
         if not os.path.isfile(quiz_file_name.replace(".txt", "_quiz_notsolved.txt")):
             quiz_attempt = requests.put(
-                f"https://quiz.rmotr.com/api/v1/quizzes/{content_uuid}/attempts/{quiz_id}",
+                f"https://quiz.rmotr.com/api/v1/quizzes/{content_uuid}/attempts/{quiz_id}?parent_type=course&parent_id={course_uuid}",
                 headers=request_headers,
                 json=quiz_meta,
                 proxies=proxy_config,
@@ -561,12 +563,12 @@ def download_quiz(course_name, content_uuid, complete_path, index):
         logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
         sleep(10)
         refresh_token(initial_quiz_attempt)
-        download_quiz(course_name, content_uuid, complete_path, index)
+        download_quiz(course_name, content_uuid, complete_path, index, course_uuid)
 
     else:
         logger.opt(colors=True).error(f"There was an issue fetching the quiz {content_uuid} from {course_name}")
         debug_requests(initial_quiz_attempt)
-        download_quiz(course_name, content_uuid, complete_path, index)
+        download_quiz(course_name, content_uuid, complete_path, index, course_uuid)
 
 
 def download_exercise(course_name, content_uuid, complete_path, index):
@@ -607,7 +609,7 @@ def download_exercise(course_name, content_uuid, complete_path, index):
 
 
 def download_slide_files(slide_url, slide_files_path, els_cdn_cookies, content_uuid, count, extension):
-    logger.opt(colors=True).info(f"Downloading {extension.upper()} files of {slide_url}")
+    logger.opt(colors=True).info(f"Downloading {extension.upper()} files of {slide_url} - this is slow")
     is_not_end = True
 
     while is_not_end:
@@ -728,7 +730,7 @@ def download_slide(course_name, content_uuid, complete_path, index):
                 )
 
         # Downloading slide's index and required js files
-        logger.opt(colors=True).info(f"Downloading index.html file of from {slide_url}")
+        logger.opt(colors=True).info(f"Downloading index.html from {slide_url}")
         slide_index = requests.get(
             slide_url,
             headers=request_headers,
@@ -895,7 +897,7 @@ def download_course(course_dict):
                     print()
 
                 if content_type == "quiz":
-                    download_quiz(name, content_uuid, complete_path, index)
+                    download_quiz(name, content_uuid, complete_path, index, course_uuid)
                     print()
 
                 if content_type == "exercise":
