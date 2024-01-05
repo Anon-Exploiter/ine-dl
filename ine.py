@@ -380,53 +380,68 @@ def download_aria2c(filename, url):
     os.system(command)
 
 
-def download_video(course_name, content_uuid, complete_path, index):
+def download_video(course_name, content_uuid, complete_path, index, course_uuid):
     logger.opt(colors=True).info(f"Fetching video and subs of '{content_uuid}' from '{course_name}'")
 
     video_metadata = requests.get(
-        f"https://video.rmotr.com/api/v1/videos/{content_uuid}/media",
+        f"https://video.rmotr.com/api/v1/videos/{content_uuid}/media?parent_type=course&parent_id={course_uuid}",
         headers=request_headers,
+        proxies=proxy_config,
+        verify=False,
+    )
+
+    video_details = requests.get(
+        f"https://video.rmotr.com/api/v1/videos/{content_uuid}",
         proxies=proxy_config,
         verify=False,
     )
 
     if video_metadata.status_code == 200:
         vid_meta = json.loads(video_metadata.text)
-        video_title = vid_meta.get("title").split("/")[::-1][0]
 
-        if (".mp4" or ".mov") in video_title:
-            video_name = f"{index} - {video_title}"
-            subs_name = video_name.replace(".mp4", ".srt").replace(".mov", ".srt")
 
-        else:
-            video_name = f"{index} - {video_title}.mp4"
-            subs_name = f"{video_name}.srt"
+        if video_details.status_code == 200:
+            vid_det = json.loads(video_details.text)
+            vid_name = vid_det.get("name")
 
-        video_contents = vid_meta.get("playlist")[0]
-        video_tracks = video_contents.get("tracks")
+            video_name = f"{index} - {vid_name}.mp4"
+            subs_name = f"{index} - {vid_name}.srt"
 
-        if not os.path.isfile(f"{complete_path}/{video_name}") or os.path.isfile(f"{complete_path}/{video_name}.aria2"):
-            video_sources = video_contents.get("sources")
+            # video_title = vid_meta.get("title").split("/")[::-1][0]
 
-            file_sizes = []
+            # if (".mp4" or ".mov") in video_title:
+            #     video_name = f"{index} - {video_title}"
+            #     subs_name = video_name.replace(".mp4", ".srt").replace(".mov", ".srt")
 
-            for video_details in video_sources[::-1]:
-                video_size = video_details.get("filesize")
+            # else:
+            #     video_name = f"{index} - {video_title}.mp4"
+            #     subs_name = f"{video_name}.srt"
 
-                if video_size:
-                    file_sizes.append(video_size)
+            video_contents = vid_meta.get("playlist")[0]
+            video_tracks = video_contents.get("tracks")
 
-            for video_details in video_sources[::-1]:
-                video_download_url = video_details.get("file")
-                video_width = video_details.get("width")
-                video_height = video_details.get("height")
-                video_size = video_details.get("filesize")
+            if not os.path.isfile(f"{complete_path}/{video_name}") or os.path.isfile(f"{complete_path}/{video_name}.aria2"):
+                video_sources = video_contents.get("sources")
 
-                if sorted(file_sizes)[::-1][0] == video_size:
-                    download_aria2c(f"{complete_path}/{video_name}", video_download_url)
+                file_sizes = []
 
-        else:
-            logger.opt(colors=True).warning(f"{complete_path}/{video_name} already exists!")
+                for video_details in video_sources[::-1]:
+                    video_size = video_details.get("filesize")
+
+                    if video_size:
+                        file_sizes.append(video_size)
+
+                for video_details in video_sources[::-1]:
+                    video_download_url = video_details.get("file")
+                    video_width = video_details.get("width")
+                    video_height = video_details.get("height")
+                    video_size = video_details.get("filesize")
+
+                    if sorted(file_sizes)[::-1][0] == video_size:
+                        download_aria2c(f"{complete_path}/{video_name}", video_download_url)
+
+            else:
+                logger.opt(colors=True).warning(f"{complete_path}/{video_name} already exists!")
 
         # Check for subs
         if not os.path.isfile(f"{complete_path}/{subs_name}"):
@@ -445,12 +460,12 @@ def download_video(course_name, content_uuid, complete_path, index):
         logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
         sleep(10)
         refresh_token(video_metadata)
-        download_video(course_name, content_uuid, complete_path, index)
+        download_video(course_name, content_uuid, complete_path, index, course_uuid)
 
     else:
         logger.opt(colors=True).error(f"There was an issue fetching the video {content_uuid} from {course_name}")
         debug_requests(video_metadata)
-        download_video(course_name, content_uuid, complete_path, index)
+        download_video(course_name, content_uuid, complete_path, index, course_uuid)
 
 
 def download_quiz(course_name, content_uuid, complete_path, index):
@@ -851,6 +866,7 @@ def download_course(course_dict):
     slug = str(course_dict.get("slug"))
     files_uuids = course_dict.get("files_uuids")
     course_details = course_dict.get("content")
+    course_uuid = str(course_dict.get("id"))
 
     # if os.path.isfile(f"{name}/{slug}.json"):
     #     logger.opt(colors=True).warning(f"The course {name} has been downloaded already!")
@@ -875,7 +891,7 @@ def download_course(course_dict):
                 index = str(___).zfill(2)
 
                 if content_type == "video":
-                    download_video(name, content_uuid, complete_path, index)
+                    download_video(name, content_uuid, complete_path, index, course_uuid)
                     print()
 
                 if content_type == "quiz":
