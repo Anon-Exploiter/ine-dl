@@ -19,6 +19,7 @@ request_headers = {
     "X-Ine-Mobile": "PMJtkRFFmQ90zc4bU1FHbT4zOMpFPQCFsCnt5m1To6MIKUDUZI6sQLdCKljBJ6Qk",
     "Accept-Language": "en-us",
     "Accept-Encoding": "gzip, deflate",
+    "Connection": "close"
 }
 
 proxy_config = {
@@ -231,7 +232,11 @@ def fetch_all_courses(to_write_to):
             "https://content-api.rmotr.com/api/v1/courses?page_size=none&status=published&active=true"
         )
         logger.opt(colors=True).info("Fetching course contents, this might take some time!")
-        course_data = requests.get(all_courses_api_endpoint)
+        course_data = requests.get(all_courses_api_endpoint,
+            headers=request_headers,
+            proxies=proxy_config,
+            verify=False
+        )
 
         if course_data.status_code == 200:
             logger.opt(colors=True).success(f"Got the course contents, placing them in {to_write_to}")
