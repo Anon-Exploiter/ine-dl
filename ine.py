@@ -25,8 +25,6 @@ request_headers = {
 proxy_config = {
     # "http": "192.168.1.108:8080",
     # "https": "192.168.1.108:8080",
-    # "http": "127.0.0.1:8000",
-    # "https": "127.0.0.1:8000",
 }
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -48,9 +46,10 @@ def read_config(config_file):
         config = json.loads(f.read().strip())
         username = config.get("username")
         password = config.get("password")
+        jwt_token = config.get("jwt_token")
 
         if username and password:
-            return username, password
+            return username, password, jwt_token
 
         else:
             logger.opt(colors=True).error(f"No credentials were entered in <cyan>{config_file}</cyan>")
@@ -85,9 +84,9 @@ def debug_requests(request_object):
         logger.error("Can't debug the request, possibly contains binary characters")
 
 
-def login():
+def init_session():
     login_url = "https://uaa.ine.com:443/uaa/mobile/authenticate"
-    username, password = read_config("config.json")
+    username, password, _ = read_config("config.json")
 
     login_json_body = {
         "username": username,
@@ -105,16 +104,47 @@ def login():
         authorization_token = login_response["data"]["tokens"]["data"]["Bearer"]
         request_headers["Authorization"] = f"Bearer {authorization_token}"
 
+        with open('config.json', "w+", encoding="utf-8") as f:
+            data = json.dumps({
+                    "username": username,
+                    "password": password,
+                    "jwt_token": authorization_token
+                },
+                indent=4,
+                default=str
+            )
+
+            f.write(data)
+
     elif login_request.status_code == 401:
         login_response = json.loads(login_request.text)
 
         if login_response.get("error").get("code") == "username_or_password_invalid":
-            logger.opt(colors=True).error("Wrong credentials specified!")
+            logger.opt(colors=True).error("Wrong or invalid credentials specified!")
             exit()
 
     else:
         debug_requests(login_request)
         logger.opt(colors=True).error("There was an issue logging in!")
+
+
+def login():
+    session_state_url = "https://uaa.ine.com/uaa/auth/state/status"
+    _, __, jwt_token = read_config("config.json")
+
+    if jwt_token:
+        request_headers["Authorization"] = f"Bearer {jwt_token}"
+        session_state_request = requests.get(
+            session_state_url, headers=request_headers, proxies=proxy_config, verify=False
+        )
+
+        if session_state_request.status_code == 401:
+            # JWT Token expired, login with user credentials
+            init_session()
+
+    else:
+        # JWT token is empty in config.json, login with user credentials to store them once.
+        init_session()
 
 
 def refresh_token(original_request):
