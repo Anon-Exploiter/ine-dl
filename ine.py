@@ -23,9 +23,10 @@ request_headers = {
 }
 
 proxy_config = {
-    # "http": "192.168.1.108:8080",
-    # "https": "192.168.1.108:8080",
+    # "http": "127.0.0.1:8000",
+    # "https": "127.0.0.1:8000",
 }
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 init(autoreset=True)
@@ -489,6 +490,12 @@ def download_video(course_name, content_uuid, complete_path, index, course_uuid)
             logger.opt(colors=True).warning(f"{complete_path}/{subs_name} already exists!")
 
     elif video_metadata.status_code == 401 or video_metadata.status_code == 403 or video_metadata.status_code == 502:
+        if video_metadata.status_code == 403:
+            req_response = json.loads(video_metadata.text)
+            if "do not have permission" in req_response.get("detail"):
+                logger.error("You do not have access to this course, try and confirm that within the web application")
+                return
+
         logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
         sleep(10)
         refresh_token(video_metadata)
@@ -590,6 +597,13 @@ def download_quiz(course_name, content_uuid, complete_path, index, course_uuid):
         or initial_quiz_attempt.status_code == 403
         or initial_quiz_attempt.status_code == 502
     ):
+        
+        if initial_quiz_attempt.status_code == 403:
+            req_response = json.loads(initial_quiz_attempt.text)
+            if "do not have permission" in req_response.get("detail"):
+                logger.error("You do not have access to this course, try and confirm that within the web application")
+                return
+    
         logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
         sleep(10)
         refresh_token(initial_quiz_attempt)
@@ -627,6 +641,12 @@ def download_exercise(course_name, content_uuid, complete_path, index):
         or exercise_request.status_code == 403
         or exercise_request.status_code == 502
     ):
+        if exercise_request.status_code == 403:
+            req_response = json.loads(exercise_request.text)
+            if "do not have permission" in req_response.get("detail"):
+                logger.error("You do not have access to this course, try and confirm that within the web application")
+                return
+
         logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
         sleep(10)
         refresh_token(exercise_request)
@@ -750,6 +770,12 @@ def download_slide(course_name, content_uuid, complete_path, index):
                 or slides_files_request.status_code == 403
                 or slides_files_request.status_code == 502
             ):
+                if slides_files_request.status_code == 403:
+                    req_response = json.loads(slides_files_request.text)
+                    if "do not have permission" in req_response.get("detail"):
+                        logger.error("You do not have access to this course, try and confirm that within the web application")
+                        return
+
                 logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
                 sleep(10)
                 refresh_token(slides_files_request)
@@ -878,6 +904,12 @@ def download_lab(course_name, content_uuid, complete_path, index):
             logger.opt(colors=True).warning(f"The lab file {lab_file_html} already exists!")
 
     elif lab_request.status_code == 401 or lab_request.status_code == 403 or lab_request.status_code == 502:
+        if lab_request.status_code == 403:
+            req_response = json.loads(lab_request.text)
+            if "do not have permission" in req_response.get("detail"):
+                logger.error("You do not have access to this course, try and confirm that within the web application")
+                return
+            
         logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
         sleep(10)
         refresh_token(lab_request)
@@ -972,6 +1004,13 @@ def download_course(course_dict):
                 or slides_files_request.status_code == 403
                 or slides_files_request.status_code == 502
             ):
+                
+                if slides_files_request.status_code == 403:
+                    req_response = json.loads(slides_files_request.text)
+                    if "do not have permission" in req_response.get("detail"):
+                        logger.error("You do not have access to this course, try and confirm that within the web application")
+                        return
+
                 logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
                 sleep(10)
                 refresh_token(slides_files_request)
@@ -1013,17 +1052,18 @@ def main():
         )
 
     if any(vars(args).values()):
-        all_courses_metadata = "all_courses_metadata.json"
+        # all_courses_metadata = "all_courses_metadata.json"
         courses_with_access = "all_courses_with_access.json"
 
         login()
         print()
 
-        fetch_all_courses(all_courses_metadata)
+        fetch_all_courses(courses_with_access)
         print()
 
-        all_course_contents = read_all_courses_file(all_courses_metadata)
-        user_subscriptions = fetch_user_subscriptions(all_course_contents, courses_with_access, all_courses_metadata)
+        user_subscriptions = read_all_courses_file(courses_with_access)
+        # user_subscriptions = all_course_contents
+        # user_subscriptions = fetch_user_subscriptions(all_course_contents, courses_with_access, all_courses_metadata)
 
         print()
 
