@@ -945,6 +945,7 @@ def download_course(course_dict):
             child_content = child.get("content")
 
             complete_path = f"{name}/{parent_dir}/{str(__).zfill(2)} - {child_dirs}"
+            complete_path = complete_path.replace(":", "_")
             if not os.path.exists(complete_path):
                 logger.opt(colors=True).success(f"Creating directories: '{complete_path}'")
                 os.makedirs(complete_path)
