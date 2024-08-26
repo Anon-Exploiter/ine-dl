@@ -1,22 +1,17 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.9-slim
+# Use the official Ubuntu image from the Docker Hub
+FROM ubuntu:latest
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy all the specified files into the container
-COPY .gitignore .gitignore
-COPY config.json config.json
-COPY ine.py ine.py
-COPY LICENSE.md LICENSE.md
-COPY README.md README.md
-COPY requirements.txt requirements.txt
+# Update the package lists and install Python3, pip, and git
+RUN apt-get update && \
+    apt-get install -y git aria2 python3 python3-pip && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install the dependencies from the requirements file
-RUN pip install --no-cache-dir -r requirements.txt
+# Clone the repository and install the required Python packages
+RUN git clone https://github.com/Anon-Exploiter/ine-dl --depth 1 && \
+    cd ine-dl && \
+    pip3 install -r requirements.txt --break-system-packages
 
-# Install colorama package
-RUN pip install colorama
-
-# Command to run your script (adjust as needed)
-CMD ["python", "ine.py"]
+# Keep the container running
+CMD ["tail", "-f", "/dev/null"]

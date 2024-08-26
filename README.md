@@ -18,6 +18,16 @@
 
 <img src="https://user-images.githubusercontent.com/18597330/179950027-c5856feb-bec0-4d32-bae9-0998fbb715a8.png" />
 
+
+### Requirements
+
+- Python (3.6.* - 3.8.*)
+- Python `pip3`
+- Python module `requests_toolbelt`
+- Python module `requests`
+- Python module `loguru`
+- External downloader `aria2`
+
 ### How does this script work? (if you want to understand the code)
 
 The script was written based on the APIs of **iOS application** to prevent Google's Invisible captcha implementation hence you will see a header (`X-Ine-Mobile`) hard coded in the script with an static API key required for the IOS API calls to succeed (this is hard-coded in the iOS application binary and can easily be grepped). 
@@ -53,15 +63,41 @@ The script was written based on the APIs of **iOS application** to prevent Googl
 1. You lose an edge here, in most of the cases, the labs are stored on INE cloud. 
 2. The script only stores the `HTML content` of it (if present)
 
+
 ### Features
 - Resume capability for a course video
 - Download subtitles for the videos (if present)
 - Download all courses without any prompt (option: -a / --all)
 - Downloading slides, labs, exercises, quizzes, and, videos
+
+### Install modules
+
+	pip3 install -r requirements.txt
 	
 ### Install aria2
 	
 	sudo apt install aria2
+
+### Running the container in Docker
+
+  ```bash
+  docker build -t ine-dl .
+  docker run -d --name ine-dl -v {HOSTDIRECTORY}:/app/ine-dl/downloads ine-dl
+  ```
+
+Make sure you replace {HOSTDIRECTORY} in the command to map to an on device save folder
+
+### Works on
+
+- ~Windows 7/8/8.1~ (It should work fine in WSL but not in cmd/PS)
+- Ubuntu 18.04 LTS
+- Ubuntu 20.04 LTS
+ 
+### Download ine-dl
+
+You can download the latest version of ine-dl by cloning the GitHub repository.
+
+	git clone https://github.com/Anon-Exploiter/ine-dl --depth 1
 
 ### Help menu 
 
@@ -136,6 +172,22 @@ Necessary arguments:
 
 	python ine-dl.py -ct {category_id}
     python ine-dl.py -ct {category_id} -p 2
+	
+### To DOs
+- [x] Fetch all the courses and write into a file
+- [x] Fetch & Match the subscriptions and then put stuff into the course file
+- [x] Implement downloading of video files (highest resolution and so-on)
+- [x] Implement quiz downloading
+    - [x] Write the quizzes into an text file and then write it's correct results (json:is_correct) into another file!
+- [x] Implement exercise downloading
+- [x] Implement iframe downloading
+    - [x] Implement html, css, js, woff, img files downloading
+- [x] Implement lab downloading
+    - [x] Check if description_html exists and if not, write the json object of the whole lab for user satisfaction
+- [x] Downloading the files_uuids zip/pdf files
+- [x] Write a json into the course directory containing whole course data
+- [x] Implement all argparse arguments
+
 
 ### Screenshots
 
