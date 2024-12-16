@@ -77,7 +77,16 @@ The script was written based on the APIs of **iOS application** to prevent Googl
 ### Install aria2
 	
 	sudo apt install aria2
-	
+
+### Running the container in Docker
+
+  ```bash
+  docker build -t ine-dl .
+  docker run -d --name ine-dl -v {HOSTDIRECTORY}:/app/ine-dl/downloads ine-dl
+  ```
+
+Make sure you replace {HOSTDIRECTORY} in the command to map to an on device save folder
+
 ### Works on
 
 - ~Windows 7/8/8.1~ (It should work fine in WSL but not in cmd/PS)
