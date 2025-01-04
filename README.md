@@ -189,6 +189,12 @@ Necessary arguments:
 - [x] Implement all argparse arguments
 
 
+### What it can't do
+
+- At the moment, learning paths and bootcamps downloading is not supported
+    - You can, however, download the courses within those paths and bootcamps manually by specifying their UUID
+    - This can also be automated using a bash script to download a lot of UUIDs one by one or using parallel processing
+
 ### Screenshots
 
 <img src="https://user-images.githubusercontent.com/18597330/179950027-c5856feb-bec0-4d32-bae9-0998fbb715a8.png" />
