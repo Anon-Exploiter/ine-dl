@@ -194,6 +194,7 @@ Necessary arguments:
 - At the moment, learning paths and bootcamps downloading is not supported
     - You can, however, download the courses within those paths and bootcamps manually by specifying their UUID
     - This can also be automated using a bash script to download a lot of UUIDs one by one or using parallel processing
+    - https://github.com/Anon-Exploiter/ine-dl/issues/8
 
 ### Screenshots
 
