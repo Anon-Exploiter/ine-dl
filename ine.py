@@ -415,6 +415,18 @@ def download_aria2c(filename, url):
 
 def download_video(course_name, content_uuid, complete_path, index, course_uuid):
     logger.opt(colors=True).info(f"Fetching video and subs of '{content_uuid}' from '{course_name}'")
+    path = Path(course_name) / "resume_file.txt"
+    if path.is_file():
+        with path.open("r") as f:
+            reader = set(map(str.strip, f.readlines()))
+
+            if content_uuid in reader:
+                logger.opt(colors=True).info(
+                    f"'{content_uuid}' already downloaded -- skipping!"
+                )
+                return
+
+    resume_file = open(f"{course_name}/resume_file.txt", "a")
 
     video_metadata = requests.get(
         f"https://video.rmotr.com/api/v1/videos/{content_uuid}/media?parent_type=course&parent_id={course_uuid}",
@@ -472,9 +484,13 @@ def download_video(course_name, content_uuid, complete_path, index, course_uuid)
 
                     if sorted(file_sizes)[::-1][0] == video_size:
                         download_aria2c(f"{complete_path}/{video_name}", video_download_url)
+                print(content_uuid, file=resume_file)
+                resume_file.close()
 
             else:
                 logger.opt(colors=True).warning(f"{complete_path}/{video_name} already exists!")
+                print(content_uuid, file=resume_file)
+                resume_file.close()
 
         # Check for subs
         if not os.path.isfile(f"{complete_path}/{subs_name}"):
