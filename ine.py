@@ -5,6 +5,7 @@ from sys import stdout
 from time import sleep
 from re import findall
 from shutil import copyfileobj
+from pathlib import Path
 
 import concurrent.futures
 import requests
@@ -456,18 +457,13 @@ def download_aria2c(filename, url):
 
 def download_video(course_name, content_uuid, complete_path, index, course_uuid):
     logger.opt(colors=True).info(f"Fetching video and subs of '{content_uuid}' from '{course_name}'")
-    path = Path(course_name) / "resume_file.txt"
-    if path.is_file():
-        with path.open("r") as f:
-            reader = set(map(str.strip, f.readlines()))
 
-            if content_uuid in reader:
-                logger.opt(colors=True).info(
-                    f"'{content_uuid}' already downloaded -- skipping!"
-                )
+    resume_path = Path(course_name) / "resume_file.txt"
+    if resume_path.is_file():
+        with resume_path.open("r", encoding="utf-8") as resume_file:
+            if any(content_uuid == line.strip() for line in resume_file):
+                logger.opt(colors=True).info(f"'{content_uuid}' already downloaded -- skipping!")
                 return
-
-    resume_file = open(f"{course_name}/resume_file.txt", "a")
 
     video_metadata = requests.get(
         f"https://video.rmotr.com/api/v1/videos/{content_uuid}/media?parent_type=course&parent_id={course_uuid}",
@@ -492,6 +488,9 @@ def download_video(course_name, content_uuid, complete_path, index, course_uuid)
 
             video_name = f"{index} - {vid_name}.mp4"
             subs_name = f"{index} - {vid_name}.srt"
+            video_path = f"{complete_path}/{video_name}"
+            aria2_path = f"{video_path}.aria2"
+            subs_path = f"{complete_path}/{subs_name}"
 
             # video_title = vid_meta.get("title").split("/")[::-1][0]
 
@@ -506,7 +505,7 @@ def download_video(course_name, content_uuid, complete_path, index, course_uuid)
             video_contents = vid_meta.get("playlist")[0]
             video_tracks = video_contents.get("tracks")
 
-            if not os.path.isfile(f"{complete_path}/{video_name}") or os.path.isfile(f"{complete_path}/{video_name}.aria2"):
+            if not os.path.isfile(video_path) or os.path.isfile(aria2_path):
                 video_sources = video_contents.get("sources")
 
                 file_sizes = []
@@ -524,27 +523,28 @@ def download_video(course_name, content_uuid, complete_path, index, course_uuid)
                     video_size = video_details.get("filesize")
 
                     if sorted(file_sizes)[::-1][0] == video_size:
-                        download_aria2c(f"{complete_path}/{video_name}", video_download_url)
-                print(content_uuid, file=resume_file)
-                resume_file.close()
+                        download_aria2c(video_path, video_download_url)
 
             else:
-                logger.opt(colors=True).warning(f"{complete_path}/{video_name} already exists!")
-                print(content_uuid, file=resume_file)
-                resume_file.close()
+                logger.opt(colors=True).warning(f"{video_path} already exists!")
 
         # Check for subs
-        if not os.path.isfile(f"{complete_path}/{subs_name}"):
+        if not os.path.isfile(subs_path):
             for video_subs in video_tracks:
                 subs_label = video_subs.get("label")
                 subs_language = video_subs.get("language")
                 subs_download_url = video_subs.get("file")
 
                 if subs_label and (subs_label == "English" or subs_language == "en"):
-                    download_aria2c(f"{complete_path}/{subs_name}", subs_download_url)
+                    download_aria2c(subs_path, subs_download_url)
 
         else:
-            logger.opt(colors=True).warning(f"{complete_path}/{subs_name} already exists!")
+            logger.opt(colors=True).warning(f"{subs_path} already exists!")
+
+        if os.path.isfile(video_path) and not os.path.isfile(aria2_path):
+            resume_path.parent.mkdir(parents=True, exist_ok=True)
+            with resume_path.open("a", encoding="utf-8") as resume_file:
+                resume_file.write(f"{content_uuid}\n")
 
     elif video_metadata.status_code == 401 or video_metadata.status_code == 403 or video_metadata.status_code == 502:
         if video_metadata.status_code == 403:
