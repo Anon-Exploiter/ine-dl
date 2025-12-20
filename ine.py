@@ -23,8 +23,8 @@ request_headers = {
 }
 
 proxy_config = {
-    # "http": "127.0.0.1:8000",
-    # "https": "127.0.0.1:8000",
+    # "http": "192.168.10.115:8080",
+    # "https": "192.168.10.115:8080",
 }
 
 
@@ -261,33 +261,74 @@ def fetch_all_courses(to_write_to):
         logger.opt(colors=True).warning(f"Delete this file if you want to fetch a fresh list!")
 
     else:
-        all_courses_api_endpoint = (
-            "https://content-api.rmotr.com/api/v1/courses?page_size=none&status=published&active=true"
-        )
-        logger.opt(colors=True).info("Fetching course contents, this might take some time!")
-        course_data = requests.get(all_courses_api_endpoint,
-            headers=request_headers,
-            proxies=proxy_config,
-            verify=False
-        )
+        page = 1
+        page_size = 100
+        all_courses = []
 
-        if course_data.status_code == 200:
+        logger.opt(colors=True).info("Fetching course contents with pagination, this might take some time!")
+
+        while True:
+            all_courses_api_endpoint = (
+                f"https://content-api.rmotr.com/api/v1/courses?page={page}&page_size={page_size}"
+            )
+            course_data = requests.get(
+                all_courses_api_endpoint,
+                headers=request_headers,
+                proxies=proxy_config,
+                verify=False,
+                timeout=30,
+            )
+
+            if course_data.status_code == 200:
+                json_data = json.loads(course_data.text)
+                page_results = json_data.get("results", [])
+                all_courses.extend(page_results)
+
+                slug_count = sum(1 for course in page_results if course.get("slug"))
+                logger.opt(colors=True).info(f"Fetched page {page} with {slug_count} courses")
+
+                if not json_data.get("next"):
+                    break
+
+                page += 1
+
+            elif course_data.status_code == 404:
+                invalid_page = None
+                try:
+                    invalid_page = json.loads(course_data.text).get("detail")
+                except json.JSONDecodeError:
+                    invalid_page = None
+
+                if invalid_page == "Invalid page.":
+                    break
+
+                logger.opt(colors=True).error("There was some issue in fetching all the courses' metadata")
+                debug_requests(course_data)
+                break
+
+            elif (
+                course_data.status_code == 401
+                or course_data.status_code == 403
+                or course_data.status_code == 502
+                or course_data.status_code == 504
+            ):
+                logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
+                sleep(10)
+                refresh_token(course_data)
+
+            else:
+                logger.opt(colors=True).error("There was some issue in fetching all the courses' metadata")
+                debug_requests(course_data)
+                break
+
+        if all_courses:
             logger.opt(colors=True).success(f"Got the course contents, placing them in {to_write_to}")
-            json_data = json.loads(course_data.text)
-
-            logger.opt(colors=True).info(f"Total number of courses: {len(json_data)}")
-            all_courses = json.dumps(json_data, indent=4, default=str)
+            logger.opt(colors=True).info(f"Total number of courses: {len(all_courses)}")
 
             with open(to_write_to, "w+", encoding="utf-8") as f:
-                f.write(all_courses)
-
-        elif course_data.status_code == 401 or course_data.status_code == 403 or course_data.status_code == 502:
-            logger.warning("Sleeping for 10 seconds, server might be rate limiting!")
-            sleep(10)
-            refresh_token(course_data)
-
+                f.write(json.dumps(all_courses, indent=4, default=str))
         else:
-            logger.opt(colors=True).error("There was some issue in fetching all the courses' metadata")
+            logger.opt(colors=True).error("No course data was fetched.")
 
 
 def fetch_user_subscriptions(course_contents, outfile, all_courses_metadata):
